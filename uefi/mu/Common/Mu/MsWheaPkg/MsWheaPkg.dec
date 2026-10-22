@@ -1,0 +1,81 @@
+## @file
+# Package declaration file for Microsoft WHEA Package
+#
+# Copyright (C) Microsoft Corporation. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+
+[Defines]
+  DEC_SPECIFICATION     = 0x00010017
+  PACKAGE_NAME          = MsWheaPkg
+  PACKAGE_VERSION       = 0.1
+  PACKAGE_GUID          = B34D6A40-334D-4596-836E-ECCD0409CD2D
+
+[Guids]
+  gMsWheaPkgTokenSpaceGuid =    { 0x9b859fdb, 0xcae9, 0x44f8, { 0x80, 0x86, 0xbb, 0xc0, 0xb2, 0x69, 0x3a, 0x1d } }
+  gMsWheaReportServiceGuid =    { 0x8efebc4a, 0x5222, 0x409c, { 0xa5, 0x9f, 0x6f, 0x06, 0xdd, 0xb7, 0x96, 0x78 } }
+  gMuTelemetrySectionTypeGuid = { 0x85183a8b, 0x9c41, 0x429c, { 0x93, 0x9c, 0x5c, 0x3c, 0x08, 0x7c, 0xa2, 0x80 } }
+  gMsWheaReportRecordIDGuid  =  { 0x8efeb64a, 0x5322, 0x429c, { 0xa5, 0x9f, 0x6f, 0x16, 0xdd, 0xa7, 0x86, 0x79 } }
+
+  # Internal guid to be populated in DataType guid of report status code call
+  gMsWheaRSCDataTypeGuid   =    { 0x91deea05, 0x8c0a, 0x4dcd, { 0xb9, 0x1e, 0xf2, 0x1c, 0xa0, 0xc6, 0x84, 0x5 } }
+
+  # Test guid to be populated in IhvSharingGuid of MS_WHEA_RSC_INTERNAL_ERROR_DATA
+  gMuTestIhvSharedGuid     =    { 0x6de15562, 0x3b90, 0x4f73, { 0xb4, 0x58, 0x5a, 0x59, 0xe4, 0x21, 0xb2, 0xb8 } }
+  # Test guid to be populated in LibraryID of MS_WHEA_RSC_INTERNAL_ERROR_DATA
+  gMuTestLibraryGuid       =    { 0xf3446251, 0x8ba4, 0x4fe9, { 0xae, 0xed, 0x26, 0x5c, 0x45, 0xca, 0x4a, 0xf6 } }
+
+  ## Guid which we'll use to get and store the variable which states whether or not we should raise errors at boot
+  #
+  gRaiseTelemetryErrorsAtBoot = {0x34b1e7cd, 0x9cc8, 0x4dcd, {0x9f, 0x9a, 0xf7, 0x1f, 0x1f, 0xae, 0xfd, 0xc6}}
+
+  ## HWH Menu Formset Guid
+  #
+  # Include/Guid/HwhMenuGuid.h
+  gHwhMenuFormsetGuid = {0x3b82383d, 0x7add, 0x4c6a, {0xad, 0x2b, 0x71, 0x9b, 0x8d, 0x7b, 0x77, 0xc9}}
+
+[Includes]
+  Include
+
+[Includes.common.Private]
+  Private
+  Test/Include
+
+[Protocols]
+
+[Ppis]
+
+[LibraryClasses]
+  MsWheaEarlyStorageLib|Include/Library/MsWheaEarlyStorageLib.h
+  MuTelemetryHelperLib |Include/Library/MuTelemetryHelperLib.h
+  ParserRegistryLib|Include/Library/ParserRegistryLib.h
+
+  ##  @libraryclass Checks the validity of hardware error records
+  ##
+  CheckHwErrRecHeaderLib|Include/Library/CheckHwErrRecHeaderLib.h
+
+[PcdsFeatureFlag]
+
+[PcdsFixedAtBuild]
+  # Configure this Pcd to determine the TPL the RSC handler used by Whea listener, default to TPL_CALLBACK
+  gMsWheaPkgTokenSpaceGuid.PcdMsWheaRSCHandlerTpl|0x00000008|UINT32|0x00000001
+
+  gMsWheaPkgTokenSpaceGuid.PcdMsWheaReportEarlyStorageCapacity|0x00000100|UINT32|0x00000002
+  gMsWheaPkgTokenSpaceGuid.PcdMsWheaEarlyStorageDefaultValue|0xFF|UINT8|0x00000003
+  gMsWheaPkgTokenSpaceGuid.PcdVariableHardwareErrorRecordAttributeSupported|TRUE|BOOLEAN|0x00000005
+  gMsWheaPkgTokenSpaceGuid.PcdVariableHardwareMaxCount|0xFFFF|UINT16|0x00000006 # By default, don't limit HwErr count
+
+  # Platform identifier guid, set as Pcd. Platform SHOULD override this field during build!!!
+  gMsWheaPkgTokenSpaceGuid.PcdDeviceIdentifierGuid|{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}|VOID*|0x00000004
+
+  # Variable names intended for extra BERT table entries, should be unicode string separated by ';'.
+  # Note: The variables for potential BERT candidate should be stored under namespace GUID PcdBertEntriesVariableGuid.
+  #       If such variables exist, its content MUST comply with CPER error format.
+  gMsWheaPkgTokenSpaceGuid.PcdBertEntriesVariableNames|L""|VOID*|0x00000007
+
+  # Variable Guid intended for extra BERT table entries, default to gEfiHardwareErrorVariableGuid.
+  # Variables stored with PcdBertEntriesVariableGuid as GUID and PcdBertEntriesVariableNames as names
+  # will be collected and convert into BERT table during boot table for error reporting purpose.
+  gMsWheaPkgTokenSpaceGuid.PcdBertEntriesVariableGuid|{GUID("414E6BDD-E47B-47CC-B244-BB61020CF516")}|VOID*|0x00000008

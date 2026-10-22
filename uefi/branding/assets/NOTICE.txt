@@ -1,0 +1,6 @@
+Logo: supplied by the project owner, copied without redesign.
+Font glyphs: Noto Sans Regular and Medium.
+Copyright 2022 The Noto Project Authors
+https://github.com/notofonts/latin-greek-cyrillic
+Licensed under the SIL Open Font License 1.1; see NotoSans-OFL.txt.
+UI renderer and integration: BSD-2-Clause-Patent, as marked in source.

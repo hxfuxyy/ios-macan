@@ -1,0 +1,79 @@
+name: build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Publish the kit as a release (tag name, empty: only an artifact)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  kit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      THEOS: ${{ github.workspace }}/work/theos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang lld llvm make flex bison m4 perl python3 python3-venv python3-pip \
+            autoconf automake libtool meson ninja-build cmake pkg-config git curl xz-utils zstd p7zip-full \
+            binutils mingw-w64 libssl-dev uuid-dev
+          echo "$GITHUB_WORKSPACE/xnu-deps/host/bin" >> "$GITHUB_PATH"
+
+      - name: Cache toolchain and sources
+        uses: actions/cache@v4
+        with:
+          path: |
+            work/theos
+            xnu-deps/host
+            xnu-deps/sdk
+            xnu-deps/build
+            xnu-deps/src
+          key: deps-${{ hashFiles('xnu-deps/setup.sh', 'kernel/apply.sh', 'tools/mk-mesa.sh', 'tools/mesa/**', 'tools/mk-ath12k.sh') }}
+
+      - name: Toolchain, XNU, ath12k, Mesa
+        run: |
+          ./hackios --deps || { for f in xnu-deps/build/mesa/meson-setup.log xnu-deps/build/mesa/ninja.log; do [ -f "$f" ] && tail -60 "$f"; done; exit 1; }
+
+      - name: Userland, Sileo root, kernel, UEFI
+        run: |
+          ./hackios --build || { for f in work/logs/kernel-build.log work/logs/uefi-build.log; do [ -f "$f" ] && tail -80 "$f"; done; exit 1; }
+
+      - name: unzbm for Windows and Linux
+        run: |
+          mkdir -p work/tools
+          x86_64-w64-mingw32-gcc -O2 -w -static -o work/tools/unzbm.exe xnu-deps/build/lzbitmap/unzbm.c xnu-deps/build/lzbitmap/libzbitmap.c
+          cc -O2 -w -o work/tools/unzbm xnu-deps/build/lzbitmap/unzbm.c xnu-deps/build/lzbitmap/libzbitmap.c
+          python3 tools/mkkit.py
+
+      - name: Kit
+        run: |
+          cd work/kit
+          echo "${GITHUB_SHA}" > VERSION
+          zip -q -r "$GITHUB_WORKSPACE/hackios-kit.zip" kernel uefi.img root-base.tar system-overlay.tar tools VERSION
+          ls -la "$GITHUB_WORKSPACE/hackios-kit.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hackios-kit
+          path: hackios-kit.zip
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ inputs.release }}"
+          [ -n "$tag" ] || tag="${GITHUB_REF#refs/tags/}"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "HackiOS $tag" --notes-file .github/release-notes.md
+          gh release upload "$tag" hackios-kit.zip --clobber

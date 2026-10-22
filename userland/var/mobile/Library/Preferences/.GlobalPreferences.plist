@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- UIKit picks the status bar's layout by the screen's size, scale and corner radius. With
+	     fbscale=2 the screen is 375 x 812 points at two pixels a point, which no iPhone has: UIKit
+	     finds no layout, falls back to _UIStatusBarVisualProvider_Fallback and the status bar shows
+	     "rdar://45025538" instead of the time. This is the iPhone X's own layout, whatever the scale. -->
+	<key>UIStatusBarVisualProviderClassName</key>
+	<string>_UIStatusBarVisualProvider_Split1125</string>
+</dict>
+</plist>

@@ -1,0 +1,42 @@
+##
+# @file Library to interface with alternate boot variable
+#
+# Copyright (C) Microsoft Corporation. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = MsAltBootLib
+  FILE_GUID                      = 104ED46A-2D13-4B46-AEE6-5F9122F9F525
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = MsAltBootLib
+
+#
+# The following information is for reference only and not required by the build
+# tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  MsAltBootLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  OemPkg/OemPkg.dec
+  PcBdsPkg/PcBdsPkg.dec
+
+[LibraryClasses]
+
+[Protocols]
+
+[Guids]
+  gAltBootGuid
+
+[Pcd]
+
+[Depex]
+  TRUE

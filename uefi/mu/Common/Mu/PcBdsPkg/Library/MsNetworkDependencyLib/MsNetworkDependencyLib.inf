@@ -1,0 +1,46 @@
+## @file
+# Library that is attached to drivers that require networking.
+#
+# Copyright (C) Microsoft Corporation. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = MsNetworkDependencyLib
+  FILE_GUID                      = 231f57fd-3875-4ec9-82fb-c077ffb22b2e
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = MsNetworkDependencyLib|DXE_CORE DXE_DRIVER DXE_RUNTIME_DRIVER UEFI_APPLICATION UEFI_DRIVER
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64 IPF EBC
+#
+
+[Sources]
+  MsNetworkDependencyLib.c
+
+[Packages]
+  PcBdsPkg/PcBdsPkg.dec
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootManagerLib
+  UefiBootServicesTableLib
+  DxeServicesTableLib
+  TimerLib
+
+[Guids]
+
+[Protocols]
+  gMsNetworkDelayProtocolGuid
+
+[FeaturePcd]
+
+[Pcd]
+
+[Depex]
+  TRUE

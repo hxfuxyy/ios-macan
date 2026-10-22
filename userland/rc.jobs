@@ -1,0 +1,7 @@
+/redwood/bin/hello_dyn started by launchd
+/redwood/bin/svc_test
+/redwood/bin/surf_test
+/bin/ps -A
+/redwood/bin/mg_test
+/redwood/bin/cpu_test
+/redwood/bin/cpu_test 240 &

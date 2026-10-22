@@ -1,0 +1,3 @@
+#!/bin/bash
+args=(); for a in "$@"; do [ "$a" = "-S" ] || args+=("$a"); done
+exec /usr/bin/install "${args[@]}"

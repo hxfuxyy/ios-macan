@@ -1,0 +1,143 @@
+## @file  AdvLoggerPkg.dec
+# This Package provides all definitions, library classes and libraries instances for
+# the Advanced Logger.
+#
+# Copyright (C) Microsoft Corporation. All rights reserved.
+## SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = AdvLoggerPkg
+  PACKAGE_UNI_FILE               = AdvLoggerPkg.uni
+  PACKAGE_GUID                   = 010c041f-ee07-4a7b-afd5-c2228eb2806e
+  PACKAGE_VERSION                = 0.10
+
+
+[Includes]
+  Include
+  Test/Mock/Include
+
+[LibraryClasses]
+
+  ## @library class Provides the interface for the top level logger
+  #
+  AdvancedLoggerLib|Include/Library/AdvancedLoggerLib.h
+
+  ## @library class Provides the interface to access the memory logger
+  #
+  AdvancedLoggerAccessLib|Include/Library/AdvancedLoggerAccessLib.h
+
+  ## @library class Provides the interface to the Hdw Port
+  #
+  AdvancedLoggerAccessLib|Include/Library/AdvancedLoggerHdwPortLib.h
+
+[Guids]
+  ## Token Space GUID
+  #  { 11aaf2c3-c657-4137-bda8-d1e58822b836}
+  gAdvLoggerPkgTokenSpaceGuid = { 0x11aaf2c3, 0xc657, 0x4137, {0xbd, 0xa8, 0xd1, 0xe5, 0x88, 0x22, 0xb8, 0x36 }}
+
+  ## Advanced Logger Hob Guid
+  #
+  gAdvancedLoggerHobGuid =  { 0x4d60cfb5, 0xf481, 0x4a98, {0x9c, 0x81, 0xbf, 0xf8, 0x64, 0x60, 0xc4, 0x3e }}
+  #
+
+  ## Advanced File Logger Write Log Files Request Event Guid
+  # Any driver may signal this event during Boot Services to cause the log to be flushed to present media.
+  #
+  gAdvancedFileLoggerWriteLogFiles = { 0xc60e894d, 0x29a4, 0x4e0b, {0xb7, 0x44, 0x77, 0x84, 0x22, 0x6e, 0x81, 0x80 }}
+
+  ## GUID for Advanced file logger policy data
+  #
+  gAdvancedFileLoggerPolicyGuid = { 0x6c3fd4f1, 0xb596, 0x438e, { 0x8a, 0xb8, 0x53, 0xf1, 0xc, 0x9c, 0x27, 0x74 } }
+
+  ## GUID for specifying Advanced logger pre-DXE logs
+  # Platforms which don't use a Pre-DXE AdvancedLoggerLib instance but still produce logging
+  # can use this GUID to publish the location of the logs so they can be written to the advanced
+  # logger buffer created in early DXE.
+  #
+  gAdvancedLoggerPreDxeLogsGuid = { 0x751fc006, 0x5804, 0x440d, { 0x8b, 0x15, 0x61, 0x8c, 0xf6, 0x56, 0xae, 0x76 } }
+
+  ## GUID for specifying Advanced logger interim hob, which is used to indicate whether the logger in the
+  # interim phase of logger buffer being initialized.
+  #
+  gAdvancedLoggerInterimHobGuid = { 0x36587034, 0xfcde, 0x45b4, { 0x9a, 0x2b, 0xd5, 0xc4, 0xc1, 0x39, 0x96, 0x5a } }
+
+  ## GUID for specifying Advanced logger interim buffer hob, which is used to carry interim log entries during the
+  # interim phase of being initialized.
+  #
+  gAdvancedLoggerInterimBufHobGuid = { 0x4c4f8c0b, 0xbe54, 0x49b3, { 0xba, 0x54, 0x33, 0xbf, 0x14, 0x47, 0x75, 0x24 } }
+
+[Ppis]
+  ## Advanced Logger Ppi - Communication from PEIM to PEI_CORE library implementation
+  #
+  gAdvancedLoggerPpiGuid =  { 0x47f1b6df, 0xcf35, 0x46a7, {0xb2, 0x84, 0x7d, 0x4d, 0xba, 0x5f, 0xf4, 0x34 }}
+
+
+[Protocols]
+  ## Advanced Logger Protocol - Communication from DXE Libary to DXE_CORE library implementation
+  #
+  gAdvancedLoggerProtocolGuid = { 0x434f695c, 0xef26, 0x4a12, {0x9e, 0xba, 0xdd, 0xef, 0x00, 0x97, 0x49, 0x7c }}
+
+
+[PcdsFeatureFlag]
+  ## PcdAdvancedLoggerFixedInRAM - Tells the Advanced Logger that the memory is preallocated at
+  #                                a fixed addres set in PcdAdvancedLoggerBase
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerFixedInRAM|FALSE|BOOLEAN|0x00010189
+
+  ## PcdAdvancedLoggerLocator - Tells the Advanced Logger to publish a variable with the logger info block address
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerLocator|FALSE|BOOLEAN|0x00010186
+
+  ## PcdAdvancedFileLoggerForceEnable - Forces the creation of the Logs subdirectory on non USB devices
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedFileLoggerForceEnable|TRUE|BOOLEAN|0x00010184
+
+  ## PcdAdvancedLoggerAutoWrapEnable - Automatically wrap around the LogCurrentOffset cursor when it reaches the end
+  # of the log. This feature only activates at runtime (after exit boot service event).
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerAutoWrapEnable|FALSE|BOOLEAN|0x00010188
+
+  ## PcdAdvancedLoggerHdwPortOsRuntimeDisable - Suppress hardware port writes at OS
+  # runtime (after ExitBootServices). By default, hardware port writes remain disabled for an
+  # implementation that cannot be safely called after ExitBootServices. Set to FALSE for a
+  # platform where the hardware port implementation can safely be called after ExitBootServices.
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerHdwPortOsRuntimeDisable|TRUE|BOOLEAN|0x0001018A
+
+
+[PcdsFixedAtBuild]
+  ## Advanced Logger Base - NULL = UEFI starts with PEI or DXE, and there is no SEC, or SEC
+  #                                provides no memory log buffer
+  #                         Address = UEFI starts with SEC, and SEC provided LogInfoPtr is at this address
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerBase|0x00000000|UINT64|0x00010181
+
+  ## Advanced Logger Car Base - Physical address to use for CacheAsRam region for AdvLogger
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerCarBase|0x00000000|UINT64|0x00010198
+
+  ## PcdAdvancedLoggerPreMemPages = Size of pre-memory memory buffer (SEC or PEI Pre-memory)
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerPreMemPages|8|UINT32|0x00010182
+
+  ## PcdAdvancedLoggerPages - Number of pages of in memory UEFI log.  The default allows for 4MB
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerPages|1024|UINT32|0x00010183
+
+  ## PcdAdvancedFileLoggerFlush - When the in memory log is flushed to media
+  # The values supported are:
+  # 0 = Never
+  # 1 = Ready To Boot
+  # 2 = Exit Boot Services
+  #
+  # The values can be combined eg. 3 == Ready To Boot and Exit Boot Services.
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedFileLoggerFlush|1|UINT8|0x00010187
+
+  ## Advanced Logger Hdw port filter ErrorLevel
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerHdwPortDebugPrintErrorLevel|0xFFFFFFFF|UINT32|0x00010180
+
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  AdvLoggerPkgExtra.uni

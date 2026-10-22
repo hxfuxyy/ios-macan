@@ -1,0 +1,142 @@
+/**
+  Copyright (c) 2011-2014, ARM Limited. All rights reserved.
+  Copyright (c) 2014, Linaro Limited. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+**/
+
+#include <Library/PcdLib.h>
+#include <Library/DebugLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/MemoryMapHelperLib.h>
+#include <Library/PrintLib.h>
+#include <Library/HobLib.h>
+
+#include <Protocol/EFIKernelInterface.h>
+
+#include "ShimLibraries/EFIShim.h"
+#include "Include/FvList.h"
+
+#include "PlatformPei.h"
+
+//
+// Shim Library Loader
+//
+EFI_SHIM_LIBRARY_LOADER
+ShLibraryLoader = {
+  0x00010001,
+  ShimInstallLib,
+  ShimLoadLib
+};
+
+UINTN*
+CreateFvList (IN EFI_KERNEL_PROTOCOL *SchedulerProtocol)
+{
+  EFI_STATUS  Status;
+  UINTN      *FvListAddr;
+
+  // Allocate Memory
+  FvListAddr = AllocateZeroPool (FV_LIST_STRUCTURE_SIZE * MAX_FV_ENTRIES);
+  if (FvListAddr == NULL) {
+    DEBUG ((EFI_D_ERROR, "%a: Failed to Allocate Memory for FV List!\n", __FUNCTION__));
+    goto exit;
+  }
+
+  // Go thru each FV Entry
+  for (UINT8 i = 0; i < MAX_FV_ENTRIES; i++) {
+    LockHandle *FvEntryHandle;
+    CHAR8       FvEntryName[16];
+
+    // Set FV Entry Name
+    AsciiSPrint (FvEntryName, ARRAY_SIZE (FvEntryName), "FVLCK%u", i);
+
+    // Init FV Entry Lock
+    Status = SchedulerProtocol->Lock->InitLock (FvEntryName, &FvEntryHandle);
+    if (EFI_ERROR (Status)) {
+      DEBUG ((EFI_D_ERROR, "%a: Failed to Init FV Entry %u Lock! Status = %r\n", __FUNCTION__, i, Status));
+      goto exit;
+    }
+
+    // Add FV Entry Lock Handle
+    FV_LIST_LOCK_HANDLE (FvListAddr, i) = (UINT64)FvEntryHandle;
+  }
+
+  return FvListAddr;
+
+exit:
+  // Free Buffer
+  if (FvListAddr != NULL) {
+    FreePool (FvListAddr);
+  }
+
+  return NULL;
+}
+
+VOID
+BuildXblHobs (
+  IN EFI_PHYSICAL_ADDRESS SchedulerInterfaceAddr,
+  IN EFI_PHYSICAL_ADDRESS DtbExtensionAddr)
+{
+  EFI_MEMORY_REGION_DESCRIPTOR InfoBlkRegion        = {0};
+  UINTN                        ShimLibLoaderAddress = (UINTN)&ShLibraryLoader;
+  BOOLEAN                      Prodmode             = FALSE;
+
+  // Locate "Info Blk" Memory Region
+  LocateMemoryRegionByName ("Info Blk", &InfoBlkRegion);
+  LocateMemoryRegionByName ("Info_Blk", &InfoBlkRegion);
+
+  // Verify Memory Region
+  if (!InfoBlkRegion.Address) {
+    DEBUG ((EFI_D_ERROR, "Failed to Locate \"Info Blk\" Memory Region!\n"));
+  } else {
+    // Build Info Blk HOB
+    BuildGuidDataHob (&gEfiInfoBlkHobGuid, &InfoBlkRegion.Address, sizeof (InfoBlkRegion.Address));
+  }
+
+  // Build Shim HOB
+  BuildGuidDataHob (&gEfiShimLibraryHobGuid, &ShimLibLoaderAddress, sizeof (ShimLibLoaderAddress));
+
+  // Build Prodmode HOB
+  BuildGuidDataHob (&gEfiProdmodeHobGuid, &Prodmode, sizeof (Prodmode));
+
+  // Check Scheduler Address
+  if (SchedulerInterfaceAddr) {
+    // Build Scheduler Interface HOB
+    BuildGuidDataHob (&gEfiSchedulerInterfaceHobGuid, &SchedulerInterfaceAddr, sizeof (SchedulerInterfaceAddr));
+
+    // Get Scheduler Interface Protocol
+    EFI_KERNEL_PROTOCOL *SchedulerProtocol = (EFI_KERNEL_PROTOCOL *)SchedulerInterfaceAddr;
+
+    // Create FV List
+    UINTN *FvListAddr = CreateFvList (SchedulerProtocol);
+    if (FvListAddr != NULL) {
+      // Build FV List HOB
+      BuildGuidDataHob (&gEfiFvListHobGuid, &FvListAddr, sizeof (FvListAddr));
+    }
+  }
+
+  // Build DTB Extension HOB
+  if (DtbExtensionAddr) {
+    BuildGuidDataHob (&gEfiDtbExtensionHobGuid, &DtbExtensionAddr, sizeof (DtbExtensionAddr));
+  }
+}
+
+EFI_STATUS
+EFIAPI
+PlatformPeim ()
+{
+  // Set Default Values
+  EFI_PHYSICAL_ADDRESS SchedulerInterfaceAddr = 0;
+  EFI_PHYSICAL_ADDRESS DtbExtensionAddr       = 0;
+
+  // Build FV HOB
+  BuildFvHob (PcdGet64 (PcdFvBaseAddress), PcdGet32 (PcdFvSize));
+
+  // Get XBL HOB Addresses
+  GetXblHobAddresses (&SchedulerInterfaceAddr, &DtbExtensionAddr);
+
+  // Build XBL HOBs
+  BuildXblHobs (SchedulerInterfaceAddr, DtbExtensionAddr);
+
+  return EFI_SUCCESS;
+}

@@ -1,0 +1,44 @@
+[Defines]
+  INF_VERSION = 0x00010005
+  BASE_NAME = HackIOSMenu
+  FILE_GUID = 8634C4AC-432D-4D57-9714-6C02D4F5D9BD
+  MODULE_TYPE = UEFI_APPLICATION
+  VERSION_STRING = 1.0
+  ENTRY_POINT = DarwinMenuEntry
+
+[Sources]
+  DarwinMenu.c
+  DarwinPreflight.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+  QcomPkg/QcomPkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  UefiLib
+  BaseLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  PrintLib
+  DevicePathLib
+  FdtLib
+  PcdLib
+
+[Guids]
+  gFdtTableGuid
+  gEfiAcpi20TableGuid
+  gEfiFileSystemInfoGuid
+  gEfiGlobalVariableGuid
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid
+  gEfiSimpleFileSystemProtocolGuid
+  gEfiBlockIoProtocolGuid
+  gEfiLoadedImageProtocolGuid
+
+[FixedPcd]
+  gQcomPkgTokenSpaceGuid.PcdMassStorageFile
