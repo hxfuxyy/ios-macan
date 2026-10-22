@@ -1,0 +1,18 @@
+#
+# Device Status
+#
+[status]
+model_count = 4
+
+#
+# UEFI FD Configs
+#
+[uefi_fd]
+base = 0xAA000000
+size = 0x200000
+
+#
+# Payload Configs
+#
+[payload]
+type = "raw"

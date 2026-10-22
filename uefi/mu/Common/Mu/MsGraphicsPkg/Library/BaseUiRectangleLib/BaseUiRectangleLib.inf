@@ -1,0 +1,35 @@
+## @file
+# LIbrary to display the On screen notifications for the platform
+#
+#
+# @copyright
+# Copyright (C) Microsoft Corporation. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+#
+##
+
+
+[Defines]
+INF_VERSION = 0x00010017
+BASE_NAME = BaseUiRectangleLib
+FILE_GUID = F42F50A1-1344-4A07-A32D-9C216499A2F4
+VERSION_STRING = 1.0
+MODULE_TYPE = BASE
+LIBRARY_CLASS = UiRectangleLib
+
+
+[LibraryClasses]
+DebugLib
+MemoryAllocationLib
+FrameBufferMemDrawLib
+
+
+[Packages]
+MdePkg/MdePkg.dec
+MsGraphicsPkg/MsGraphicsPkg.dec
+
+
+[Sources]
+UiRectangle.c
+UiRectangle.h

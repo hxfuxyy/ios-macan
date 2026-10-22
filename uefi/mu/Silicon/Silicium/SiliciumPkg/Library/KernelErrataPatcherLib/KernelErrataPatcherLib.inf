@@ -1,0 +1,40 @@
+/**
+  Copyright (c) 2022-2023 DuoWoA authors
+  Copyright (c) 2026 Project Silicium
+
+  SPDX-License-Identifier: MIT
+**/
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = KernelErrataPatcherLib
+  FILE_GUID                      = 964EFA94-9929-4EF8-9E68-8F6F6FA62E63
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = KernelErrataPatcherLib|DXE_DRIVER
+  CONSTRUCTOR                    = KernelErrataPatcherLibConstructor
+
+[Sources]
+  KernelErrataPatcherLib.c
+  MemoryAttribute.c
+  Winload.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+
+[LibraryClasses]
+  DebugLib
+  UefiBootServicesTableLib
+  CacheMaintenanceLib
+  ErrataPatchesLib
+  PerformanceLib
+  BaseMemoryLib
+  BaseLib
+
+[Protocols]
+  gEfiMemoryAttributeProtocolGuid
+
+[Guids]
+  gEfiEventExitBootServicesGuid
+  gEfiEventReadyToBootGuid

@@ -1,0 +1,42 @@
+## @file MuTelemetryHelperLib.inf
+# Helper functions to make it even easier to report telemetry events in
+# source code.
+#
+##
+# Copyright (C) Microsoft Corporation. All rights reserved.
+## SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+
+[Defines]
+  INF_VERSION         = 0x00010017
+  BASE_NAME           = MuTelemetryHelperLib
+  FILE_GUID           = 621C6068-5F0D-4590-8C60-F5E9B720F140
+  VERSION_STRING      = 1.0
+  MODULE_TYPE         = BASE
+  LIBRARY_CLASS       = MuTelemetryHelperLib
+
+#
+# The following information is for reference only and not required by the build tools.
+#
+#  VALID_ARCHITECTURES           = ANY
+#
+
+
+[Sources]
+  MuTelemetryHelperLib.c
+
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  MsWheaPkg/MsWheaPkg.dec
+
+[LibraryClasses]
+  DebugLib
+  ReportStatusCodeLib
+  BaseMemoryLib
+  MemoryAllocationLib
+
+[Guids]
+  gMsWheaRSCDataTypeGuid                  ## CONSUMES

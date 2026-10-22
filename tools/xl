@@ -1,0 +1,190 @@
+#!/bin/bash
+cd "$(dirname "$(readlink -f "$0")")/.." || exit 1
+K=xnu-src/xnu-8796.121.2/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837
+[ -f $K ] || K=prebuilt/mach.development.bcm2837
+L=loader/loader.efi
+[ -f $L ] || L=prebuilt/loader.efi
+mkdir -p logs
+PHONE=${XDG_RUNTIME_DIR:-/tmp}/darwin-redwood-phone
+
+fb() { flock -w 90 $PHONE.lock timeout "${FB_TIMEOUT:-10}" fastboot "$@" 2>&1; }
+live_loader() { fb getvar version | grep -Eq 'version: 0\.([5-9]|[1-9][0-9])'; }
+in_fastboot() { fastboot devices 2>/dev/null | grep -q fastboot; }
+is_loader() { in_fastboot && fb getvar product | grep -q 'product: xnuloader'; }
+state() {
+	if is_loader; then echo loader
+	elif in_fastboot; then echo fastboot
+	elif [ "$(adb get-state 2>/dev/null)" = device ]; then echo android
+	else echo absent; fi
+}
+wait_for() {
+	local i
+	for ((i = 0; i < $2; i += 2)); do [ "$(state)" = "$1" ] && return 0; sleep 2; done
+	return 1
+}
+
+enter() {
+	case "$(state)" in
+	loader) return 0 ;;
+	android) adb reboot bootloader; wait_for fastboot 60 || { echo "xl: phone did not reach fastboot"; return 1; } ;;
+	fastboot) ;;
+	absent) echo "xl: waiting for the phone (Android or fastboot)..."
+		local i; for ((i = 0; i < 180; i += 3)); do [ "$(state)" != absent ] && break; sleep 3; done
+		[ "$(state)" = absent ] && { echo "xl: phone not reachable"; return 1; }
+		enter; return ;;
+	esac
+	loader/mkpayload.py -o usb-payload.bin loader.efi=$L --usb >/dev/null &&
+		./mkxnuimg.py -p usb-payload.bin -o xnu-usb.img >/dev/null || { echo "xl: image build failed"; return 1; }
+	local try
+	for try in 1 2; do
+		FB_TIMEOUT=40 fb boot xnu-usb.img | grep -q OKAY || { sleep 3; continue; }
+		sleep 6
+		wait_for loader 30 && return 0
+		[ "$(state)" = fastboot ] || break
+	done
+	echo "xl: loader did not come up on USB (state: $(state))"; return 1
+}
+
+fetch_log() {
+	rm -f "$1"
+	FB_TIMEOUT=20 fb get_staged "$1" >/dev/null
+	[ -s "$1" ] && tr -d '\0' < "$1" > "$1.tmp" && mv "$1.tmp" "$1"
+}
+
+run() {
+	enter || return 1
+	exec 8> $PHONE.run
+	flock -n 8 || { echo "xl: a run is in progress, started from $(cat $PHONE.who 2>/dev/null) (xl stop ends it)"; return 1; }
+	pwd > $PHONE.who
+	local stamp log result
+	stamp=$(date +%H%M%S); log="logs/$stamp-$2.log"
+	if [ "$1" != "oem selftest" ]; then
+		local rd=${XL_RAMDISK:-userland/root.packfs}
+		case "$rd" in
+		none|resident) rd= ;;
+		*) [ -f "$rd" ] || { echo "xl: ramdisk $rd not found"; return 1; } ;;
+		esac
+		case $K in prebuilt/*) echo "xl: no kernel built here, running $K" >&2 ;; esac
+		if [ -s $PHONE.ramdisk ]; then
+			local rwho rwhat rsize
+			IFS=$'\t' read -r rwho rwhat rsize < $PHONE.ramdisk
+			if [ "$rwho" != "$(pwd)" ]; then
+				echo "xl: the resident image was uploaded from $rwho:" \
+				     "$rwhat, $(( rsize / 1048576 )) MB. Upload your own" \
+				     "(./xl ramdisk FILE) unless that is the one you want" >&2
+			fi
+		else
+			echo "xl: nothing here recorded who uploaded the resident image;" \
+			     "if this run needs a particular one, upload it" >&2
+		fi
+		local args=${XL_CMDLINE--v}
+		case " $args " in
+		*" wifi="*|*" wifi_step="*) [ -s fw-wifi/mac ] && args="$args wifi_mac=$(tr -d ' \n\r' < fw-wifi/mac)" ;;
+		esac
+		loader/mkpayload.py -o run-payload.bin kernel=$K ${rd:+ramdisk=$rd} --cmdline "loader_return_after=${XL_SECS:-8} epoch=$(date +%s) sb_delay=${XL_SB_DELAY:-8} $args" >/dev/null || return 1
+		FB_TIMEOUT=30 fb stage run-payload.bin | grep -q OKAY || { echo "xl: upload failed"; return 1; }
+	fi
+	local live=; live_loader && live=1
+	fb $1 >/dev/null
+	if [ -n "$live" ] && [ "$1" != "oem selftest" ]; then
+		local deadline=$(( $(date +%s) + ${XL_SECS:-8} + 100 )) followed=$(date +%s)
+		while :; do
+			result=$(FB_TIMEOUT=15 fb getvar result | grep '^result:')
+			case "$result" in ""|*running*) ;; *) break ;; esac
+			[ "$(date +%s)" -ge "$deadline" ] && { result=; break; }
+			if [ -n "$XL_FOLLOW" ] && [ $(( $(date +%s) - followed )) -ge "$XL_FOLLOW" ]; then
+				followed=$(date +%s)
+				followed_n=$(( ${followed_n:-0} + 1 ))
+				fb oem log | grep -q OKAY && fetch_log "$log.live" && { [ -z "$XL_FOLLOW_KEEP" ] || cp "$log.live" "$log.live.$followed_n"; }
+			fi
+			sleep 2
+		done
+	else
+		result=$(FB_TIMEOUT=$(( ${XL_SECS:-8} + 100 )) fb getvar result | grep '^result:')
+	fi
+	if [ -z "$result" ]; then
+		echo "xl: no answer — the kernel hung; waiting for the watchdog to reset the phone"
+		wait_for android 120 && echo "xl: phone is back in Android" || echo "xl: phone did not come back (state: $(state))"
+		return 2
+	fi
+	fetch_log "$log"
+	ln -sf "$(basename "$log")" logs/last.log
+	echo "$result  [$log]"
+	case "$result" in
+	*hung*|*no-such-core*)
+		echo "xl: the kernel did not come back from its core; restarting the phone"
+		fb reboot >/dev/null
+		return 2 ;;
+	esac
+}
+
+ramdisk() {
+	enter || return 1
+	if [ "$1" = none ]; then
+		fb oem ramdisk none >/dev/null; rm -f $PHONE.ramdisk
+		echo "xl: resident ramdisk dropped"; return
+	fi
+	set -- "${1:-userland/system.packfs}"
+	[ -f "$1" ] || { echo "xl: $1 not found"; return 1; }
+	local t0=$(date +%s) size=$(stat -c %s "$1")
+	fb oem ramdisk | grep -q OKAY || { echo "xl: the loader refused (no memory window?)"; return 1; }
+	FB_TIMEOUT=1800 fb stage "$1" | grep -q OKAY || { echo "xl: upload failed"; return 1; }
+	local dt=$(( $(date +%s) - t0 )); [ $dt -lt 1 ] && dt=1
+	echo "xl: $(( size / 1048576 )) MB uploaded in $dt s ($(( size / 1048576 / dt )) MB/s)"
+	printf '%s\t%s\t%s\n' "$(pwd)" "$1" "$size" > $PHONE.ramdisk 2>/dev/null
+}
+
+screenshot() {
+	enter || return 1
+	local out=${1:-logs/screen.png} geom
+	geom=$(fb getvar screen | sed -n 's/^screen: //p')
+	[ -n "$geom" ] && fb oem screenshot | grep -q OKAY || { echo "xl: the loader has no display"; return 1; }
+	FB_TIMEOUT=60 fb get_staged logs/screen.raw >/dev/null
+	python3 - logs/screen.raw "$out" $geom <<'PY' && rm -f logs/screen.raw && echo "xl: $out ($geom)"
+import struct, sys, zlib
+raw, out, width, height, stride = sys.argv[1], sys.argv[2], *map(int, sys.argv[3:6])
+data = open(raw, 'rb').read()
+rows = bytearray()
+for y in range(height):
+    line = data[y * stride:y * stride + width * 4]
+    rows.append(0)
+    rgb = bytearray(width * 3)
+    rgb[0::3], rgb[1::3], rgb[2::3] = line[2::4], line[1::4], line[0::4]
+    rows += rgb
+def chunk(kind, body):
+    return struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
+with open(out, 'wb') as f:
+    f.write(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)) +
+            chunk(b'IDAT', zlib.compress(bytes(rows), 6)) + chunk(b'IEND', b''))
+PY
+}
+
+not_anothers_run() {
+	flock -n $PHONE.run true 2>/dev/null && return 0
+	[ "$(cat $PHONE.who 2>/dev/null)" = "$(pwd)" ] || [ -n "$XL_FORCE" ] && return 0
+	echo "xl: a run started from $(cat $PHONE.who 2>/dev/null) is in progress; XL_FORCE=1 ./xl $1 ends it all the same" >&2
+	return 1
+}
+
+case "$1" in
+""|run|selftest|state|screenshot|log|stop|reboot) ;;
+*)	if ! flock -n $PHONE.run true 2>/dev/null; then
+		echo "xl: a run is in progress: only state, screenshot, log, stop and reboot now" >&2; exit 1
+	fi ;;
+esac
+
+case "$1" in
+enter) enter && echo "xl: loader is up" ;;
+screenshot) screenshot "$2" ;;
+ramdisk) ramdisk "$2" ;;
+run) run "oem run $2" "run${2:+-cp$2}" ;;
+selftest) run "oem selftest" selftest ;;
+log) enter && fb oem log >/dev/null && fetch_log logs/loader.log && cat logs/loader.log ;;
+stop) not_anothers_run stop && fb oem stop | grep -q OKAY && echo "xl: asked the kernel to come back" ;;
+memmap) enter && fb oem memmap >/dev/null && fb oem log >/dev/null && fetch_log logs/loader.log && sed -n '/^memory map/,$p' logs/loader.log ;;
+hang) enter && fb oem hang; echo "xl: waiting for the watchdog..."; t0=$(date +%s); wait_for android 150 && echo "xl: back in Android after $(( $(date +%s) - t0 )) s" || echo "xl: not back (state: $(state))" ;;
+reboot) not_anothers_run reboot && fb reboot ;;
+reload) [ "$(state)" = loader ] && { fb reboot >/dev/null; wait_for android 120; }; enter && echo "xl: loader is up" ;;
+state) state ;;
+*) echo "usage: tools/xl enter|state|screenshot [FILE]|ramdisk [FILE|none]|run [CP]|selftest|log|stop|memmap|reboot|reload" ;;
+esac

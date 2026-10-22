@@ -1,0 +1,52 @@
+[Defines]
+  DEC_SPECIFICATION                   = 0x00010005
+  PACKAGE_NAME                        = SiliciumPkg
+  PACKAGE_GUID                        = A6205705-39A7-4700-BEC1-67FC38345453
+  PACKAGE_VERSION                     = 0.1
+
+[Includes]
+  Include                              # Root Include for the Package
+
+[Guids]
+  gSiliciumPkgTokenSpaceGuid          = { 0x055720A6, 0xA739, 0x0047, { 0xBE, 0xC1, 0x67, 0xFC, 0x38, 0x34, 0x54, 0x53 } }
+
+[Protocols]
+  gKeypadDeviceProtocolGuid           = { 0xA412C1AC, 0x0295, 0x4AE3, { 0xB5, 0x9F, 0x52, 0x23, 0x1F, 0x26, 0x55, 0x4D } }
+
+[PcdsFixedAtBuild]
+  #
+  # Simple Frame Buffer
+  #
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferWidth|0|UINT32|0x0000A000
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferHeight|0|UINT32|0x0000A001
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferColorDepth|0|UINT8|0x0000A002
+  gSiliciumPkgTokenSpaceGuid.PcdFrameBufferDelay|0|UINT32|0x0000A003
+
+  #
+  # Timer
+  #
+  gSiliciumPkgTokenSpaceGuid.PcdTimerFreqOverwrite|0|UINT64|0x0000A100
+
+  #
+  # SMBIOS
+  #
+  gSiliciumPkgTokenSpaceGuid.PcdSmbiosProcessorModel|"Not Specified"|VOID*|0x0000A200
+  gSiliciumPkgTokenSpaceGuid.PcdSmbiosProcessorPartNumber|"Not Specified"|VOID*|0x0000A201
+  gSiliciumPkgTokenSpaceGuid.PcdSmbiosSystemBoardModel|"Not Specified"|VOID*|0x0000A202
+  gSiliciumPkgTokenSpaceGuid.PcdSmbiosSystemManufacturer|"Not Specified"|VOID*|0x0000A203
+  gSiliciumPkgTokenSpaceGuid.PcdSmbiosSystemModel|"Not Specified"|VOID*|0x0000A204
+  gSiliciumPkgTokenSpaceGuid.PcdSmbiosSystemRetailModel|"Not Specified"|VOID*|0x0000A205
+  gSiliciumPkgTokenSpaceGuid.PcdSmbiosSystemRetailSku|"Not Specified"|VOID*|0x0000A206
+
+  #
+  # UFP Device
+  #
+  gSiliciumPkgTokenSpaceGuid.PcdUfpLoaderFile|{ 0x97, 0x0C, 0x68, 0xCC, 0xCE, 0x94, 0x09, 0x4C, 0xA3, 0x77, 0x4B, 0xED, 0x5E, 0x6E, 0x9C, 0xB9 }|VOID*|0x0000A300
+  gSiliciumPkgTokenSpaceGuid.PcdUfpDeviveFwFile|{ 0x88, 0x47, 0x3D, 0x64, 0xC8, 0x63, 0xD2, 0x40, 0xBD, 0x7A, 0x68, 0x42, 0xE6, 0x68, 0x50, 0xD1 }|VOID*|0x0000A301
+
+  #
+  # RAW Files
+  #
+  gSiliciumPkgTokenSpaceGuid.PcdNoBootOSFile|      { 0xBE, 0xFB, 0x54, 0x15, 0xE6, 0xA3, 0x40, 0x7C, 0x97, 0xB3, 0x9D, 0xAF, 0x60, 0x3A, 0x02, 0x50 }|VOID*|0x0000A400
+  gSiliciumPkgTokenSpaceGuid.PcdMassStorageBmpFile|{ 0x64, 0xF9, 0x01, 0x12, 0xD0, 0xE3, 0x40, 0xC8, 0xAE, 0xD1, 0xC4, 0x6C, 0x33, 0x91, 0xDC, 0x43 }|VOID*|0x0000A401
+  gSiliciumPkgTokenSpaceGuid.PcdSiPolicyFile|      { 0x3E, 0x10, 0x7F, 0xD2, 0x39, 0xE9, 0x4A, 0xEB, 0x80, 0x60, 0x87, 0x12, 0x09, 0xFF, 0x77, 0x07 }|VOID*|0x0000A402

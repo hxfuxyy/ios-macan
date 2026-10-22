@@ -1,0 +1,167 @@
+## @file  MsCorePkg.dec
+# This Package provides all definitions, library classes and libraries instances for MsCore.
+# MsCore is common code used in the Microsoft UEFI Core code base
+# This is targetted at promoting to open source and should be aligned with
+# Tianocore standards
+#
+# Copyright (C) Microsoft Corporation. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = MsCorePkg
+  PACKAGE_UNI_FILE               = MsCorePkg.uni
+  PACKAGE_GUID                   = C5278380-3276-469B-AE19-C840440367C5
+  PACKAGE_VERSION                = 0.10
+
+
+[Includes]
+  Include
+  Test/Mock/Include
+
+[LibraryClasses]
+
+  MathLib|Include/Library/MathLib.h
+
+  ## @libraryclass Provides the device/family subset of Uefi PlatformBootManagerLib
+  #
+  DeviceBootManagerLib|Include/Library/DeviceBootManagerLib.h
+
+  ## @libraryclass Provides PCI device info to CheckHardwareConnected
+  #
+  DeviceSpecificBusInfoLib|Include/Library/DeviceSpecificBusInfoLib.h
+
+  ## @libraryclass Provides the methods for storing the password
+  #
+  PasswordStoreLib|Include/Library/PasswordStoreLib.h
+
+  ## @libraryclass provides support for simple json parsing
+  #
+  JsonLiteParserLib|Include/Library/JsonLiteParser.h
+
+  ## @libraryclass provides interfaces to define NV index for SystemGuard.
+  TpmSgNvIndexLib|Include/Library/TpmSgNvIndexLib.h
+
+  ## @libraryclass Provides support for a queue system
+  #
+  QueueLib|Include/Library/QueueLib.h
+
+  ## @libraryclass Supports storing capsule updates in EFI partition
+  #
+  CapsulePersistenceLib|Include/Library/CapsulePersistenceLib.h
+
+  ## @libraryclass Provides support for checking if persisted capsule is supported
+  #
+  IsCapsuleSupportedLib|Include/Library/IsCapsuleSupportedLib.h
+
+  ## @libraryclass Provides key stores initialized by platforms
+  #
+  SecureBootKeyStoreLib|Include/Library/SecureBootKeyStoreLib.h
+
+  ## @libraryclass Provides support for selecting from provided key store or inspecting currently selected key
+  #
+  MuSecureBootKeySelectorLib|Include/Library/MuSecureBootKeySelectorLib.h
+
+  ## @libraryclass Supports updating the FACS Hardware Signature
+  #
+  UpdateFacsHardwareSignatureLib|Include/Library/UpdateFacsHardwareSignatureLib.h
+
+  ## @libraryclass Allows platform developers to implement platform specific MacAddressEmulation behavior
+  #
+  MacAddressEmulationPlatformLib|Include/Library/MacAddressEmulationPlatformLib.h
+
+  ## @libraryclass Provides extended support for the Arm GIC interface
+  MuArmGicExLib|Include/Library/MuArmGicExLib.h
+
+[Guids]
+  #  {a2966407-1f6b-4c86-b21e-fcc474c6f28e}
+  gMsCorePkgTokenSpaceGuid = { 0xa2966407, 0x1f6b, 0x4c86, { 0xb2, 0x1e, 0xfc, 0xc4, 0x74, 0xc6, 0xf2, 0x8e }}
+
+  ## Variable namespace GUID for the DXE phase variables.
+  # {ECF590C6-F8F9-4387-8422-486E3CCD8B20}
+  gMuVarPolicyDxePhaseGuid          = { 0xecf590c6, 0xf8f9, 0x4387, { 0x84, 0x22, 0x48, 0x6e, 0x3c, 0xcd, 0x8b, 0x20 }}
+
+  ## Variable namespace GUID for write-once, single-byte variables, specifically to be used for VarState policies.
+  # {6A85A0B9-3C08-4585-AC1F-8ED221CF059F}
+  gMuVarPolicyWriteOnceStateVarGuid = { 0x6a85a0b9, 0x3c08, 0x4585, { 0xac, 0x1f, 0x8e, 0xd2, 0x21, 0xcf, 0x05, 0x9f }}
+
+  ## DeviceSpecificBusInfo Library Guid
+  #
+  gDeviceSpecificBusInfoLibTelemetryGuid = {0x3b82283d, 0x71dd, 0x4c61, {0xad, 0x2b, 0x51, 0x9b, 0x8d, 0x7b, 0x77, 0xc9}}
+
+  ## HOB Guid for DebugFileLogger
+  gMuDebugLoggerGuid                  = {0x1c842fbb, 0x1e63, 0x432c, { 0xa1, 0xa9, 0x8a, 0x81, 0x27, 0xf1, 0x2d, 0x47 }}
+
+  ## Event notification that capsules can be processed
+  #  { 2AB1C860-E697-4EDE-8C0F-65CD6E444435 }
+  gMuReadyToProcessCapsulesNotifyGuid = { 0x2AB1C860, 0xE697, 0x4EDE, {0x8C, 0x0F, 0x65, 0xCD, 0x6E, 0x44, 0x44, 0x35}}
+
+  ## Capsule Queue UEFI variable GUID
+  #  {3c3ab3b3-bf9e-4a7f-a34f-519914f9a158}
+  #
+  #  Used for storing capsule queue information via UEFI variable
+  gCapsuleQueueDataGuid = {0x3c3ab3b3, 0xbf9e, 0x4a7f, {0xa3, 0x4f, 0x51, 0x99, 0x14, 0xf9, 0xa1, 0x58}}
+
+  ## MemoryProtectionExceptionHandler GUID for exception handler installation
+  # {61BDAF9E-67CB-40CD-A942-A3E3D0B973B2}
+  gMemoryProtectionExceptionHandlerGuid = {0x61BDAF9E, 0x67CB, 0x40CD, {0xA9, 0x42, 0xA3, 0xE3, 0xD0, 0xB9, 0x73, 0xB2 }}
+
+[Ppis]
+  gDebugPortPpiGuid = { 0x9d83f2d1, 0x9832, 0x4ded, { 0xaf, 0x78, 0x0e, 0xfe, 0x93, 0x07, 0xe8, 0xb1 }}
+
+
+[Protocols]
+  ## Mu Crypto Pkcs7 protocol
+  #
+  gMuPKCS7ProtocolGuid =  { 0x93cdb916, 0x7608, 0x4f1f, { 0xb5, 0x16, 0xc, 0x61, 0xbb, 0x24, 0x5c, 0x4f }}
+
+  ## Mu Crypto PKCS5 Password Hashing Protocol
+  #
+  gMuPKCS5PasswordHashProtocolGuid = { 0x959b7ec7, 0x1857, 0x4551, { 0xaa, 0xfb, 0x1b, 0x7a, 0xe9, 0x48, 0x20, 0x2d }}
+
+  ## Microsoft DXE Serial Status Code Handler Protocol GUID
+  ##
+  gMsSerialStatusCodeHandlerDxeProtocolGuid = { 0xa5065ca9, 0x5425, 0x4847, { 0x80, 0x8c, 0x5, 0x60, 0x18, 0x77, 0xa, 0xeb }}
+
+  ## Capsule service protocol published by CapsuleServiceProtocol
+  #  {D2A5D76F-F648-45A5-8B25-4601F3750C28}
+  #
+  gCapsuleServiceProtocolGuid = { 0xD2A5D76F, 0xF648, 0x45A5, {0x8B, 0x25, 0x46, 0x01, 0xF3, 0x75, 0x0C, 0x28}}
+
+[PcdsFeatureFlag]
+
+[PcdsFixedAtBuild]
+
+  ## Define a GUID for the regulatory graphics ACPI Table
+  gMsCorePkgTokenSpaceGuid.PcdRegulatoryGraphicFileGuid|{ 0x7B, 0x35, 0x39, 0x36,  0xD7, 0xB3,  0x23, 0x4C,  0x20, 0x9A,  0x0B, 0x74, 0x91, 0xD5, 0x70, 0xCE }|VOID*|0x00010177
+
+  ## Number of pages (EFI_PAGE_SIZE) to allocate in the EFI partition for each file log
+  ## Default: 1024 * 4KiB = 4MB
+  gMsCorePkgTokenSpaceGuid.PcdDebugFileLoggerAllocatedPages|1024|UINT32|0x4000001C
+
+  ## Pcd value representing the Pk for a platform
+  # Empty by default. Platform required to set this value to enable setting default secureboot variables.
+  gMsCorePkgTokenSpaceGuid.PcdDefaultPk |{ 0x0 }|VOID*|0x4000001D
+  
+  ## Pcd value representing the Db for a platform
+  # Empty by default. Platform required to set this value to enable setting default secureboot variables.
+  gMsCorePkgTokenSpaceGuid.PcdDefaultDb |{ 0x0 }|VOID*|0x4000001E
+  
+  ## Pcd value representing the 3PDb for a platform
+  # Empty by default. Platform required to set this value to enable setting default secureboot variables.
+  gMsCorePkgTokenSpaceGuid.PcdDefault3PDb | { 0x0 }|VOID*|0x4000001F
+  
+  ## Pcd value representing the Dbx for a platform
+  # Empty by default. Platform required to set this value to enable setting default secureboot variables.
+  gMsCorePkgTokenSpaceGuid.PcdDefaultDbx | { 0x0 }|VOID*|0x40000020
+  
+  ## Pcd value representing the Kek for a platform
+  # Empty by default. Platform required to set this value to enable setting default secureboot variables.
+  gMsCorePkgTokenSpaceGuid.PcdDefaultKek | { 0x0 }|VOID*|0x40000021
+
+[PcdsDynamic, PcdsDynamicEx]
+  gMsCorePkgTokenSpaceGuid.PcdDeviceStateBitmask|0x00000000|UINT32|0x00010178
+
+[UserExtensions.TianoCore."ExtraFiles"]
+  MsCorePkgExtra.uni

@@ -1,0 +1,3 @@
+Arch=AARCH64
+BuildDir=/home/zxcwsurx/ios-macan/uefi/mu/Build/macanPkg/DEBUG_CLANGPDB
+PlatformGuid=49301A81-23FB-4BDB-851D-1B4FBE643E04

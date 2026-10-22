@@ -1,0 +1,40 @@
+## @file
+# Library to display the device state notifications for the platform using color bars
+#
+# Copyright (C) Microsoft Corporation. All rights reserved.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+
+[Defines]
+INF_VERSION = 0x00010017
+BASE_NAME = ColorBarDisplayDeviceStateLib
+FILE_GUID = 31BDD15E-B4B9-4028-ACA8-27892F194473
+VERSION_STRING = 1.0
+MODULE_TYPE = BASE
+LIBRARY_CLASS = DisplayDeviceStateLib
+
+
+[LibraryClasses]
+DebugLib
+UiRectangleLib
+MemoryAllocationLib
+DeviceStateLib
+BaseMemoryLib
+
+
+[Packages]
+MdePkg/MdePkg.dec
+MdeModulePkg/MdeModulePkg.dec
+MsGraphicsPkg/MsGraphicsPkg.dec
+MsCorePkg/MsCorePkg.dec
+
+
+[Sources]
+ColorBarDisplayDeviceStateLib.c
+Resources/UnlockBitmap.h
+Resources/UnlockBitmap32.h
+Resources/UnlockBitmap64.h
+Resources/UnlockBitmap112.h
+Resources/UnlockBitmap128.h
+Resources/UnlockBitmap256.h

@@ -1,0 +1,17 @@
+/**
+  Copyright (c) 2011-2012, ARM Limited. All rights reserved.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+**/
+
+#include <Library/PlatformSecLib.h>
+#include <Library/ArmSmmuDetachLib.h>
+
+VOID
+PlatformInitialize ()
+{
+  // Set MDP SIDs
+  CONST UINT16 MdpStreams[] = { 0x800, 0x801, 0x804, 0x81C, 0x19A1, 0x19A2, 0x19A3, 0x19A4, 0x19A5, 0x19AB };
+
+  // Detach IOMMU Domains
+  ArmSmmuDetach (MdpStreams, ARRAY_SIZE (MdpStreams));
+}

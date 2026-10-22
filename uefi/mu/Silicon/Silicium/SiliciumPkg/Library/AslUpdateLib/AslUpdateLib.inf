@@ -1,0 +1,31 @@
+##
+#  Copyright (c) 2020, Intel Corporation. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010017
+  BASE_NAME                      = AslUpdateLib
+  FILE_GUID                      = 8621697D-4E3A-4BF2-ADB0-3E2FF06559CA
+  VERSION_STRING                 = 1.0
+  MODULE_TYPE                    = DXE_DRIVER
+  LIBRARY_CLASS                  = AslUpdateLib|DXE_DRIVER
+  CONSTRUCTOR                    = LocateAcpiProtocols
+
+[Sources]
+  AslUpdateLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+
+[LibraryClasses]
+  DebugLib
+  BaseMemoryLib
+  UefiBootServicesTableLib
+  MemoryAllocationLib
+  BaseLib
+
+[Protocols]
+  gEfiAcpiTableProtocolGuid
+  gEfiAcpiSdtProtocolGuid

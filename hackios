@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
+cd "$ROOT"
+KIT=$ROOT/work/kit
+MU=$ROOT/uefi/mu
+MU_VENV=${MU_VENV:-$ROOT/work/uefi-venv}
+SRC=$ROOT/xnu-src/xnu-8796.121.2
+KOUT=$SRC/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/mach.development.bcm2837
+export THEOS=${THEOS:-$ROOT/work/theos}
+mkdir -p "$KIT" "$ROOT/work/_archive"
+
+say() { printf '\033[1;36mhackios:\033[0m %s\n' "$*"; }
+die() { printf '\033[1;31mhackios:\033[0m %s\n' "$*" >&2; exit 1; }
+tool() { python3 "$ROOT/scripts/hackios_tool.py" "$@"; }
+
+usage() {
+	cat <<EOF
+usage: ./hackios COMMAND
+
+  Ready-made (no compiler needed):
+  --get                the release kit (kernel, UEFI, userland), iOS 16.5 from Apple, the images
+  --boot [-- OPTIONS]  the phone (Android, fastboot or the loader) into iOS, from RAM
+  --android            back to Android
+  --wifi NAME PASS     the Wi-Fi network iOS joins by itself at every start (--wifi off: none)
+  --status             what is connected and what is ready
+  --tools              download adb and fastboot into work/platform-tools (done automatically when missing)
+  --udev               let adb and fastboot use the phone without root (asks for sudo once)
+
+  Single steps:
+  --fetch              iOS 16.5 from Apple into ios165/
+  --assemble           the root and system images from the kit, iOS and firmware/
+  --run [-- OPTIONS]   iOS on a phone already in the loader
+
+  Building everything yourself (Linux):
+  --install            --deps, --fetch, --build
+  --deps               toolchain, Apple's XNU with kernel/, ath12k, Mesa
+  --build              userland, Sileo root, kernel, UEFI, then --assemble
+  --kernel             only the kernel and the UEFI image
+  --clean              move build state into work/_archive
+
+  Examples: ./hackios --get && ./hackios --boot
+            ./hackios --boot -- --island 2 --seconds 300
+EOF
+}
+
+theos() {
+	[ -d "$THEOS/sdks/iPhoneOS16.5.sdk" ] && [ -x "$THEOS/toolchain/linux/iphone/bin/ld" ] && return
+	say "theos toolchain and the iOS 16.5 SDK into $THEOS"
+	mkdir -p "$THEOS/sdks" "$THEOS/toolchain"
+	curl -sL --fail https://github.com/L1ghtmann/llvm-project/releases/download/test-210562a/iOSToolchain-x86_64.tar.xz |
+		tar -xJ -C "$THEOS/toolchain"
+	rm -rf "$THEOS/sdks/.src"
+	git clone -q --depth 1 --filter=blob:none --sparse https://github.com/theos/sdks.git "$THEOS/sdks/.src"
+	git -C "$THEOS/sdks/.src" sparse-checkout set iPhoneOS16.5.sdk
+	mv "$THEOS/sdks/.src/iPhoneOS16.5.sdk" "$THEOS/sdks/"
+	rm -rf "$THEOS/sdks/.src"
+}
+
+deps() {
+	theos
+	say "host tools (stage 1)"; xnu-deps/setup.sh --stage1
+	say "XNU + kernel/"; kernel/apply.sh
+	say "host tools (stage 2)"; xnu-deps/setup.sh --stage2
+	say "ath12k"; tools/mk-ath12k.sh
+	say "Mesa"; tools/mk-mesa.sh
+}
+
+kernel() {
+	[ -d "$SRC" ] || die "no $SRC: run ./hackios --deps"
+	say "kernel"
+	for f in $(cd kernel/files && find . -type f | sed 's|^./||'); do
+		cmp -s "kernel/files/$f" "$SRC/$f" || cp "kernel/files/$f" "$SRC/$f"
+	done
+	mkdir -p work/logs
+	bash tools/xnu-build.sh -j"$(nproc)" -k > work/logs/kernel-build.log 2>&1 || true
+	grep -q '_macan_adreno_init' <(llvm-nm "$KOUT") || die "the kernel did not link: work/logs/kernel-build.log"
+	if grep -E 'macan_[a-z_]+\.c:[0-9]+:[0-9]+: (error|warning)' work/logs/kernel-build.log; then die "kernel warnings"; fi
+	cp "$KOUT" "$KIT/kernel"
+	say "UEFI"
+	if [ ! -x "$MU_VENV/bin/python3" ]; then
+		python3 -m venv "$MU_VENV" && "$MU_VENV/bin/pip" install -q -r "$MU/pip-requirements.txt"
+	fi
+	python3 uefi/add_ram_loader.py --kernel "$KIT/kernel" > /dev/null
+	mkdir -p "$MU/Build"
+	( cd "$MU" && "$MU_VENV/bin/python3" build_uefi.py -d macan -r DEBUG ) > work/logs/uefi-build.log 2>&1 ||
+		die "the UEFI build failed: work/logs/uefi-build.log"
+	cp "$MU/Mu-macan.img" "$KIT/uefi.img"
+	say "kernel and UEFI in work/kit"
+}
+
+sileo_assets() {
+	local dir=artifacts/ace6t/sileo
+	mkdir -p "$dir"
+	fetch_asset() {
+		local name=$1 url=$2 sum=$3 json=$4
+		if [ ! -f "$dir/$name" ] || [ "$(sha256sum "$dir/$name" | cut -d' ' -f1)" != "$sum" ]; then
+			say "downloading $name"
+			curl -sL --fail -o "$dir/$name" "$url"
+		fi
+		[ "$(sha256sum "$dir/$name" | cut -d' ' -f1)" = "$sum" ] || die "checksum mismatch: $name"
+		printf '{\n  "url": "%s",\n  "bytes": %s,\n  "sha256": "%s"\n}\n' "$url" "$(stat -c %s "$dir/$name")" "$sum" > "$dir/$json"
+	}
+	fetch_asset bootstrap-iphoneos-arm64.tar.zst https://www.procurs.us/bootstraps/1900/bootstrap-iphoneos-arm64.tar.zst \
+		8354c3aa1ecdad8ebc47d9a76dfca6f830a2b757278068bd33b98bf1d638a9cb bootstrap-provenance.json
+	fetch_asset org.coolstar.sileo_2.5.1_iphoneos-arm64.deb https://github.com/Sileo/Sileo/releases/download/2.5.1/org.coolstar.sileo_2.5.1_iphoneos-arm64.deb \
+		8e3c90e5a7d32f4ca207a0ac30d3cfa8a13dca86a2b4e11cb3f9e5c68d7bc97a package-provenance.json
+}
+
+build() {
+	theos
+	sileo_assets
+	say "userland"; ( cd userland && bash build.sh )
+	say "Sileo helpers"; scripts/build-sileo-helpers.sh
+	if [ -d work/sileo-root ]; then mv work/sileo-root "work/_archive/sileo-root-$(date +%Y%m%d-%H%M%S)"; fi
+	say "Sileo root"
+	python3 sileo/prepare_sileo.py
+	python3 sileo/sileo_extras.py --pack ''
+	kernel
+	python3 tools/mkkit.py
+	if [ -d ios165/rootfs ]; then tool assemble; else say "no iOS yet: ./hackios --fetch, then ./hackios --assemble"; fi
+}
+
+udev() {
+	local rule=/etc/udev/rules.d/51-hackios.rules
+	say "writing $rule (18d1: fastboot and the iOS loader; 22d9, 2a70: OPPO and OnePlus adb)"
+	printf '%s\n' 'SUBSYSTEM=="usb", ATTR{idVendor}=="18d1", MODE="0666", TAG+="uaccess"' \
+		'SUBSYSTEM=="usb", ATTR{idVendor}=="22d9", MODE="0666", TAG+="uaccess"' \
+		'SUBSYSTEM=="usb", ATTR{idVendor}=="2a70", MODE="0666", TAG+="uaccess"' | sudo tee "$rule" > /dev/null
+	sudo udevadm control --reload-rules && sudo udevadm trigger
+	say "done: unplug and plug the phone back in"
+}
+
+clean() {
+	local stamp; stamp=$(date +%Y%m%d-%H%M%S)
+	find . -name __pycache__ -type d -prune -exec rm -rf {} +
+	if [ -d work/sileo-root ]; then mv work/sileo-root "work/_archive/sileo-root-$stamp"; fi
+	if [ -d uefi/mu/Build ]; then mv uefi/mu/Build "work/_archive/uefi-build-$stamp"; fi
+	say "build state moved into work/_archive"
+}
+
+[ $# -gt 0 ] || { usage; exit 0; }
+cmd=$1; shift
+case "$cmd" in
+	--get) tool get ;;
+	--install) deps; tool fetch; build ;;
+	--deps) deps ;;
+	--fetch) tool fetch ;;
+	--assemble) tool assemble ;;
+	--wifi) tool wifi "$@" ;;
+	--build) build ;;
+	--kernel) kernel ;;
+	--boot) tool boot "$@" ;;
+	--run) tool run "$@" ;;
+	--android) tool android ;;
+	--status) tool status ;;
+	--tools) tool tools ;;
+	--udev) udev ;;
+	--clean) clean ;;
+	-h|--help) usage ;;
+	*) usage >&2; exit 2 ;;
+esac
